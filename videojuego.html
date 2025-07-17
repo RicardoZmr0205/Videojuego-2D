@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAME 2D - SB</title>
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
+      canvas {
+        background: #eee;
+        display: block;
+        margin: 0 auto;
+      }
+    </style>
+</head>
+<body>
+    <canvas id="myCanvas" width="500" height="350"></canvas>
+<script>
+var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+
+var ballSize = 12; // Tamaño del cuadrado (antes bola)
+var x = canvas.width / 2;
+var y = canvas.height -30;
+var dx = 2;
+var dy = -2;
+
+var paddleHeight = 10;
+var paddleWidth = 75;
+var paddleX = (canvas.width - paddleWidth) / 2;
+var rightPressed = false;
+var leftPressed = false;
+
+var brickRowCount = 6; // Aumentado
+var brickColumnCount = 6; // Aumentado
+var brickWidth = 60;
+var brickHeight = 20;
+var brickPadding = 10;
+var brickOffsetTop = 40;
+var brickOffsetLeft = 35;
+
+var score = 0;
+var lives = 3;
+
+var bricks = [];
+for (var c = 0; c < brickColumnCount; c++) {
+    bricks[c] = [];
+    for (var r = 0; r < brickRowCount; r++) {
+        bricks[c][r] = { x: 0, y: 0, status: 1 };
+    }
+}
+
+document.addEventListener("keydown", keyDownHandler, false);
+document.addEventListener("keyup", keyUpHandler, false);
+document.addEventListener("mousemove", mouseMoveHandler, false);
+
+function keyDownHandler(e) {
+    if (e.keyCode == 39) rightPressed = true;
+    else if (e.keyCode == 37) leftPressed = true;
+}
+function keyUpHandler(e) {
+    if (e.keyCode == 39) rightPressed = false;
+    else if (e.keyCode == 37) leftPressed = false;
+}
+function mouseMoveHandler(e) {
+    var relativeX = e.clientX - canvas.offsetLeft;
+    if (relativeX > 0 && relativeX < canvas.width) {
+        paddleX = relativeX - paddleWidth / 2;
+    }
+}
+
+function collisionDetection() {
+    for (var c = 0; c < brickColumnCount; c++) {
+        for (var r = 0; r < brickRowCount; r++) {
+            var b = bricks[c][r];
+            if (b.status == 1) {
+                var circleX = b.x + brickWidth / 2;
+                var circleY = b.y + brickHeight / 2;
+                var radius = brickWidth / 5;
+
+                // Centro del cuadrado (bola)
+                var squareCenterX = x;
+                var squareCenterY = y;
+
+                // Encuentra la distancia más corta entre el centro del cuadrado y el círculo
+                var dx_ = squareCenterX - circleX;
+                var dy_ = squareCenterY - circleY;
+                var distance = Math.sqrt(dx_ * dx_ + dy_ * dy_);
+
+                // Si está colisionando
+                if (distance < radius + ballSize / 2) {
+                    dy = -dy;
+                    b.status = 0;
+                    score++;
+                    if (score == brickRowCount * brickColumnCount) {
+                        alert("¡GANASTE!");
+                        document.location.reload();
+                    }
+                }
+            }
+        }
+    }
+}
+
+function drawBall() {
+    ctx.beginPath();
+    ctx.rect(x - ballSize / 2, y - ballSize / 2, ballSize, ballSize); // cuadrado
+    ctx.fillStyle = "#1100ffa2";
+    ctx.fill();
+    ctx.closePath();
+}
+
+function drawPaddle() {
+    ctx.beginPath();
+    ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+    ctx.fillStyle = "#75812dff";
+    ctx.fill();
+    ctx.closePath();
+}
+
+function drawBricks() {
+    for (var c = 0; c < brickColumnCount; c++) {
+        for (var r = 0; r < brickRowCount; r++) {
+            if (bricks[c][r].status == 1) {
+                var brickX = r * (brickWidth + brickPadding) + brickOffsetLeft;
+                var brickY = c * (brickHeight + brickPadding) + brickOffsetTop;
+                bricks[c][r].x = brickX;
+                bricks[c][r].y = brickY;
+
+                 var radius = brickWidth / 5;
+                var centerX = brickX + brickWidth / 2;
+                var centerY = brickY + brickHeight / 2;
+
+                // Crear degradado radial
+                var gradient = ctx.createRadialGradient(centerX, centerY, radius / 4, centerX, centerY, radius);
+                gradient.addColorStop(0, "#ff3c00e3");  // Verde claro en el centro
+                gradient.addColorStop(1, "#6620002d");  // Verde oscuro en el borde
+
+                // Círculo en lugar de ladrillo
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+    }
+}
+
+function drawScore() {
+    ctx.font = "16px 'Comic Sans MS'";
+    ctx.fillStyle = "#0095DD";
+    ctx.fillText("Puntaje: " + score, 8, 20);
+}
+
+function drawLives() {
+    ctx.font = "16px 'Comic Sans MS'";
+    ctx.fillStyle = "#0095DD";
+    ctx.fillText("Vidas: " + lives, canvas.width - 80, 20);
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBricks();
+    drawBall();
+    drawPaddle();
+    drawScore();
+    drawLives();
+    collisionDetection();
+
+    if (x + dx > canvas.width - ballSize / 2 || x + dx < ballSize / 2) {
+        dx = -dx;
+    }
+    if (y + dy < ballSize / 2) {
+        dy = -dy;
+    } else if (y + dy > canvas.height - ballSize / 2) {
+        if (x > paddleX && x < paddleX + paddleWidth) {
+            dy = -dy;
+        } else {
+            lives--;
+            if (!lives) {
+                alert("GAME OVER");
+                document.location.reload();
+            } else {
+                x = canvas.width / 2;
+                y = canvas.height - 30;
+                dx = 2;
+                dy = -2;
+                paddleX = (canvas.width - paddleWidth) / 2;
+            }
+        }
+    }
+
+    if (rightPressed && paddleX < canvas.width - paddleWidth) {
+        paddleX += 7;
+    } else if (leftPressed && paddleX > 0) {
+        paddleX -= 7;
+    }
+
+    x += dx;
+    y += dy;
+    requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
